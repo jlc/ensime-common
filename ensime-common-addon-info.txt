@@ -1,0 +1,12 @@
+{
+  "name" : "ensime-common",
+  "version" : "0.1",
+  "author" : "Jeanluc Chasseriau <jeanluc@lo.cx>",
+  "maintainer" : "Jeanluc Chasseriau <jeanluc@lo.cx>",
+  "repository" : {"type": "git", "url": "git://github.com/jlc/ensime-common.git", "branch" : "master"},
+  "runtimepath" : "vim",
+  "dependencies" : {
+    "ensime": {}
+  },
+  "description" : "Common files to interface with ensime"
+}

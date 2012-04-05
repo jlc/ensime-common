@@ -201,6 +201,7 @@ class SwankProcessor(object):
 
   @CatchAndLogException
   def process(self, data):
+    Logger().debug("Processor.process: data: '%s'" % (data))
 
     self.messages.add(data)
 
@@ -265,7 +266,7 @@ class SwankProcessor(object):
       def consume(data, size):
         return data[size:]
 
-      data = self.rest + data
+      data = self.rest + data.replace("\n", '')
       self.rest = ''
       expect = self.expectedSize
 
@@ -276,8 +277,8 @@ class SwankProcessor(object):
           try:
             expect = int(data[:6], 16)
             data = consume(data, 6)
-          except:
-            Logger().error("Buffer.add: expected header in hex but got: " + data)
+          except Exception as e:
+            Logger().error("Buffer.add: exception (%s) expected header in hex but got: '%s'" % (e, data))
             return False
 
         dataSize = len(data)

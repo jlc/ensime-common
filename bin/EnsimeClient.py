@@ -130,7 +130,7 @@ class RawProxy(Proxy):
 
     Logger().debug("server: " + hexSize + data)
 
-    if not self.write.stdout(hexSize + data):
+    if not self.write.stdout(hexSize + data + "\n"):
       return False
 
     return True

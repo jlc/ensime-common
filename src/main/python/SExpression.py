@@ -30,8 +30,11 @@
 
 import re
 import types
+import logging
 
 from Helper import *
+
+log = logging.getLogger('ensime-common')
 
 # S-Expression Python Object representation
 # Base object of S-Expression to python conversion
@@ -104,7 +107,7 @@ class SExpList(SExp):
         attrs[v.asName().replace('-','_')] = value
       else:
         # TODO: Not sure if it's printed in case (:return :ok () 42) -> what happen to 42??
-        Logger().error("SExpList.toPy: cannot convert to object: '"+str(v)+"' is not a KeywordAtom")
+        log.error("SExpList.toPy: cannot convert to object: '"+str(v)+"' is not a KeywordAtom")
    
     Ty = type('SExpPyObj', (SExpPyObject,), attrs)
     return Ty()
@@ -250,17 +253,17 @@ class SExpConverter:
       listObjectAttribute(py, helper)
       return SExpList(items)
     elif isinstance(py, types.MethodType):
-      Logger().warn("pyToSExp: Method cannot be converted to SExp")
+      log.warn("pyToSExp: Method cannot be converted to SExp")
       return None
     else:
-      Logger().error("pyToSExp: argument ("+str(py)+") cannot be converted to SExp")
+      log.error("pyToSExp: argument ("+str(py)+") cannot be converted to SExp")
       return None
 
   def toWire(self, se):
     if isinstance(se, SExp):
       return se.toWire()
     else:
-      Logger().error("SExpConverter: given object is not a SExp")
+      log.error("SExpConverter: given object is not a SExp")
       return None
 
 # Quick SExpression Parser specificaly adapted to ensime
@@ -316,7 +319,7 @@ class SExpParser:
         if s[i] == '(':
           end = matchingBracketPos(s[i:])
           if end == None:
-            Logger().error("subParse: cannot find matching bracket! abording!")
+            log.error("subParse: cannot find matching bracket! abording!")
             return SExpList([])
           else:
             end += i
@@ -327,7 +330,7 @@ class SExpParser:
           # TODO: What about \" here?
           end = s.find('"', i+1)
           if end == -1:
-            Logger().error("subParse: cannot find matching double-quote! abording!")
+            log.error("subParse: cannot find matching double-quote! abording!")
             return SExpList([])
           else:
             end += 1

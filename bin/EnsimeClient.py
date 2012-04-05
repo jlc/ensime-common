@@ -32,7 +32,10 @@ import sys
 import socket
 import select
 import time
+import logging
 from optparse import OptionParser
+
+log = logging.getLogger('EnsimeClient')
 
 # try to find directories 'lib/common' or 'src/main/python' to import dependencies
 def sourceFinder(directory):
@@ -59,7 +62,7 @@ if directory == None:
 sys.path.append(directory)
 
 try:
-  from Helper import Logger
+  from Helper import *
 except:
   print("Unable to find Helper.py")
   sys.exit(1)
@@ -79,7 +82,7 @@ class Proxy:
         size = int(hexSize, 16)
         data = self.serverSocket.recv(size)
       except Exception as e:
-        Logger().error("Proxy.Read.server: unable to read data from server: " + str(e))
+        log.error("Proxy.Read.server: unable to read data from server: " + str(e))
         return (None, None, None)
       return (size, hexSize, data)
 
@@ -87,7 +90,7 @@ class Proxy:
       try:
         data = sys.stdin.readline()
       except Exception as e:
-        Logger().error("Proxy.Read.stdin: unable to read data from stdin: " + str(e))
+        log.error("Proxy.Read.stdin: unable to read data from stdin: " + str(e))
         return None
       return data
 
@@ -99,7 +102,7 @@ class Proxy:
       try:
         self.serverSocket.sendall(data)
       except Exception as e:
-        Logger().error("Proxy.Write.server: unable to send data to server: " + str(e))
+        log.error("Proxy.Write.server: unable to send data to server: " + str(e))
         return False
       return True
 
@@ -108,7 +111,7 @@ class Proxy:
         sys.stdout.write(data)
         sys.stdout.flush()
       except Exception as e:
-        Logger().error("Proxy.Write.stdout: unable to write data to stdout: " + str(e))
+        log.error("Proxy.Write.stdout: unable to write data to stdout: " + str(e))
         return False
       return True
 
@@ -128,7 +131,7 @@ class RawProxy(Proxy):
     if size == None:
       return False
 
-    Logger().debug("server: " + hexSize + data)
+    log.debug("server: " + hexSize + data)
 
     if not self.write.stdout(hexSize + data + "\n"):
       return False
@@ -140,7 +143,7 @@ class RawProxy(Proxy):
     if data == None:
       return False
 
-    Logger().debug("stdin: " + data)
+    log.debug("stdin: " + data.strip())
 
     if not self.write.server(data):
       return False
@@ -158,7 +161,7 @@ class SwankProxy(Proxy):
     if size == None:
       return False
 
-    Logger().debug("server: " + hexSize + data)
+    log.debug("server: " + hexSize + data)
 
     if not self.write.stdout(data + "\n"):
       return False
@@ -170,7 +173,7 @@ class SwankProxy(Proxy):
     if data == None:
       return False
 
-    Logger().debug("stdin: " + data)
+    log.debug("stdin: " + data.strip())
 
     dataSize = "%06x" % (len(data))
     if not self.write.server(dataSize + data):
@@ -190,9 +193,8 @@ def usage():
   print("")
   sys.exit(1)
 
+@CatchAndLogException
 def main():
-
-  Logger().useStdOut(True)
 
   parser = OptionParser()
   parser.add_option('-l', '--log',
@@ -215,10 +217,12 @@ def main():
   if options.log != None:
     logfile = options.log
 
+  initLog('', logfile)
+
   if options.port != None:
     try: port = int(options.port)
     except:
-      Logger().error("Invalid given port number ("+options.port+")")
+      log.error("Invalid given port number ("+options.port+")")
       return 1
 
   elif options.portfile != None:
@@ -228,7 +232,7 @@ def main():
       f.close()
       port = int(port)
     except:
-      Logger().error("Unable to read port from: "+options.portfile)
+      log.error("Unable to read port from: "+options.portfile)
       return 1
 
   else:
@@ -240,16 +244,8 @@ def main():
   try:
     serverSocket = socket.create_connection(addr)
   except:
-    Logger().error("Unable to connect to swank server "+str(addr))
+    log.error("Unable to connect to swank server "+str(addr))
     return 1
-
-  if not Logger().setOutput(logfile):
-    Logger.error("Unable to open log file")
-    return 1
-
-  Logger().useStdOut(False)
-  Logger().info('-'*30)
-  Logger().info(time.ctime() + ": start proxying")
 
   proxy = None
   if options.raw:
@@ -261,18 +257,18 @@ def main():
 
   serverSocket.close()
 
-  Logger().info("done")
+  log.info("done")
 
   return 0
 
 def runProxy(proxy):
 
   def serverError():
-    Logger().error("runProxy: serverError: server error")
+    log.error("runProxy: serverError: server error")
     return False
 
   def stdinError():
-    Logger().error("runProxy: stdinError: stdin error")
+    log.error("runProxy: stdinError: stdin error")
     return False
 
   flag = True
@@ -288,7 +284,7 @@ def runProxy(proxy):
     try:
       (i, o, e) = select.select(input, output, error, timeout)
     except BaseException as e:
-      Logger().error("Handling exception: " + str(e))
+      log.error("Handling exception: " + str(e))
       flag = False
 
     for ii in i:

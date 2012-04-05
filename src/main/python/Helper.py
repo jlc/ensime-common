@@ -29,6 +29,42 @@ import types
 import sys
 import traceback
 import re
+import logging
+
+# NOTE: Remember to initialize a Logger for 'ensime-common'
+
+# initialize a high level of logger called 'mainlogger'
+# all sublogger should be prefixed by 'mainlogger'
+def initLog(mainlogger, filename, stdout = False):
+  log = logging.getLogger(mainlogger)
+
+  FORMAT =    '%(asctime)s %(levelname)s [%(name)s] '
+  FORMAT +=   '%(message)s'
+  #FORMAT +=   '%(message)s (%(funcName)s(), %(filename)s:%(lineno)d)'
+
+  formatter = logging.Formatter(fmt=FORMAT)
+
+  handlers = []
+  handlers.append(logging.FileHandler(filename))
+
+  if stdout:
+    handlers.append(logging.StreamHandler())
+
+  for h in handlers:
+    h.setFormatter(formatter)
+    log.addHandler(h)
+
+  log.setLevel(logging.DEBUG)
+  log.propagate = False
+
+def CatchAndLogException(mth):
+  def methodWrapper(*args, **kwargs):
+    log = logging.getLogger('ensime-common')
+    try: mth(*args, **kwargs)
+    except:
+      log.exception("[ CatchAndLogException ]")
+
+  return methodWrapper
 
 #
 # Simple Singleton decorator
@@ -53,110 +89,6 @@ def listObjectAttribute(obj, fct):
       fct(it, attr)
       s.append(it)
     return s
-
-@SimpleSingleton
-class Logger:
-  DEBUG = 0
-  INFO = 1
-  WARN = 2
-  ERROR = 3
-  CRITICAL = 4
-  LOG_TY_STR = {
-    DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', 
-    ERROR: 'ERROR', CRITICAL: 'CRITICAL'
-  }
-  TO_FILE = 0
-  TO_STDOUT = 1
-  def __init__(self):
-    self.file = None
-    self.filename = ""
-    self.outputs = {self.TO_FILE: None, self.TO_STDOUT: None}
-    self.minLogLevel = self.DEBUG
-  def setOutput(self, filename):
-    try: self.file = file(filename, 'a', 1)
-    except:
-      print("Logger.setOutput: unable to open file ("+filename+")")
-      self.outputs[self.TO_FILE] = None
-      return False
-    self.filename = filename
-    self.outputs[self.TO_FILE] = self.logToFile
-    return True
-  def useStdOut(self, b):
-    if b:
-      self.outputs[self.TO_STDOUT] = self.logToStdOut
-    else:
-      self.outputs[self.TO_STDOUT] = None
-  def setMinLogLevel(self, lvl):
-    if lvl < 0 or lvl > self.CRITICAL:
-      print("Logger.setMinLogLevel: cannot set such a log level ("+str(lvl)+")")
-      return False
-    self.minLogLevel = lvl
-    return True
-  def logToFile(self, s):
-    try:
-      self.file.write(s)
-      self.file.flush()
-    except:
-      print("Logger.logToFile: unable to write in file")
-  def logToStdOut(self, s):
-    try:
-      sys.stdout.write(s)
-      sys.stdout.flush()
-    except:
-      print("Logger.logToStdOut: unable to log to stdout")
-  def log(self, ty, s):
-    if ty < self.minLogLevel: return
-    l = self.LOG_TY_STR[ty] + ' : ' + s + "\n"
-    for fct in self.outputs.values():
-      if fct != None: fct(l)
-  def debug(self, s): self.log(self.DEBUG, s)
-  def info(self, s): self.log(self.INFO, s)
-  def warn(self, s): self.log(self.WARN, s)
-  def error(self, s): self.log(self.ERROR, s)
-  def critical(self, s): 
-    self.log(self.CRITICAL, s)
-    sys.exit(1)
-
-#
-# Catch And Log Exception decorator
-#
-def CatchAndLogException(mth):
-
-  def methodWrapper(*args, **kwargs):
-
-    msg = "[ Exception catched and logged by @CatchAndLogException ]"
-
-    def toDefaultLog():
-      try:
-        filelog = open("python_exceptions.log","a")
-        filelog.write(msg+"\n")
-        traceback.print_exc(file=filelog)
-      except: pass
-
-    def toLogger():
-      Logger().error(msg)
-      traceback.print_exc(file=Logger().file)
-
-    def toSysErr():
-      sys.stderr.write(msg+"\n")
-      traceback.print_exc(file=sys.stderr)
-
-    # TODO: vim on MacOSX does not appreciate
-    # maybe we can buffer it somewhere and then print with feedkeys()
-    #outputs = [toSysErr]
-    outputs = []
-
-    if Logger().file == None:
-      outputs.append(toDefaultLog)
-    else:
-      outputs.append(toLogger)
-
-    try: mth(*args, **kwargs)
-    except:
-      for out in outputs:
-        out()
-
-  return methodWrapper
 
 # findLastDist(filesList)
 # return the name of the last distribution (last version number)

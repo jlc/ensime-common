@@ -27,8 +27,9 @@
 
 import sys
 sys.path.append("../../main/python")
-
 from Helper import *
+
+log = logging.getLogger('TestHelper')
 
 def testFindLastDist():
   listFiles = [

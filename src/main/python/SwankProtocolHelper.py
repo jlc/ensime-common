@@ -25,8 +25,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from Helper import SimpleSingleton, Logger
+from Helper import SimpleSingleton
 from SExpression import *
+
+log = logging.getLogger('ensime-common')
 
 # Response handler class
 class SwankCallHandler(object):
@@ -146,21 +148,21 @@ class SwankProcessor(object):
     kwValue = keywordAtom.toValue()
 
     if self.eventHandler.has_key(kwValue):
-      Logger().warn("Processor.registerEvent: event '"+kwValue+"' is already registered")
+      log.warn("Processor.registerEvent: event '"+kwValue+"' is already registered")
 
-    Logger().debug("Processor.registerEvent: registering event: " + kwValue)
+    log.debug("Processor.registerEvent: registering event: " + kwValue)
     self.eventHandler[kwValue] = handler
 
   def processReturn(self, sexpArgs, callId):
-    Logger().debug("Processor.processReturn: handling 'return': callId: "+str(callId))
+    log.debug("Processor.processReturn: handling 'return': callId: "+str(callId))
 
     if not isinstance(sexpArgs, SExpList):
-      Logger().error("Processor.processReturn: response argument is not a list")
-      Logger().error("Processor.processReturn: " + sexpArgs.debugString())
+      log.error("Processor.processReturn: response argument is not a list")
+      log.error("Processor.processReturn: " + sexpArgs.debugString())
       return
 
     if not self.callHandler.has_key(callId):
-      Logger().error("Processor.processReturn: callId ("+str(callId)+") not registered")
+      log.error("Processor.processReturn: callId ("+str(callId)+") not registered")
       return
 
     items = sexpArgs.toItems()
@@ -179,14 +181,14 @@ class SwankProcessor(object):
       del(self.callHandler[callId])
 
     else:
-      Logger().error("Processor.processReturn: unknown return value: "+items[0].toValue())
+      log.error("Processor.processReturn: unknown return value: "+items[0].toValue())
 
   def processEvent(self, eventName, sexpItems):
     if not self.eventHandler.has_key(eventName):
-      Logger().debug("Processor.processEvent: unregistered event: "+eventName)
+      log.debug("Processor.processEvent: unregistered event: "+eventName)
       return
 
-    Logger().debug("Processor.processEvent: handling event: " + eventName)
+    log.debug("Processor.processEvent: handling event: " + eventName)
 
     pyItems = []
     for item in sexpItems:
@@ -195,13 +197,13 @@ class SwankProcessor(object):
       else:
         pyItems.append(item.toValue())
 
-    Logger().debug("Processor.processEvent: pyArgs: " + str(pyItems))
+    log.debug("Processor.processEvent: pyArgs: " + str(pyItems))
 
     self.eventHandler[eventName](*pyItems)
 
   @CatchAndLogException
   def process(self, data):
-    Logger().debug("Processor.process: data: '%s'" % (data))
+    log.debug("Processor.process: data: '%s'" % (data))
 
     self.messages.add(data)
 
@@ -227,8 +229,8 @@ class SwankProcessor(object):
           self.processEvent(eventName, items[1:])
 
       else:
-        Logger().error("Processor.process: unregognize first SExpression item: "+items[0].toValue())
-        Logger().error("Processor.process: SExp:"+sexplist.debugString())
+        log.error("Processor.process: unregognize first SExpression item: "+items[0].toValue())
+        log.error("Processor.process: SExp:"+sexplist.debugString())
 
 
   # send(swankCall)
@@ -236,18 +238,18 @@ class SwankProcessor(object):
   def send(self, call):
     
     if self.callHandler.has_key(call.callId):
-      Logger().error("Processor.send: callId ("+str(call.callId)+") already registered")
+      log.error("Processor.send: callId ("+str(call.callId)+") already registered")
       return False
 
     self.callHandler[call.callId] = call
 
     sexp = call.asSExp()
 
-    Logger().debug("Processor.send: call (id:"+str(call.callId)+")")
-    Logger().debug("Processor.send: sexp: "+sexp.toWire())
+    log.debug("Processor.send: call (id:"+str(call.callId)+")")
+    log.debug("Processor.send: sexp: "+sexp.toWire())
    
     if self.sendFct == None:
-      Logger().error("Processor.send: send function has not been set")
+      log.error("Processor.send: send function has not been set")
       return
 
     data = sexp.toWire() + "\n"
@@ -278,7 +280,7 @@ class SwankProcessor(object):
             expect = int(data[:6], 16)
             data = consume(data, 6)
           except Exception as e:
-            Logger().error("Buffer.add: exception (%s) expected header in hex but got: '%s'" % (e, data))
+            log.error("Buffer.add: exception (%s) expected header in hex but got: '%s'" % (e, data))
             return False
 
         dataSize = len(data)

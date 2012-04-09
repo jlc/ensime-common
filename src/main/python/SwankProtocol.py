@@ -54,6 +54,15 @@ class SwankRpc:
   @SwankMethod("swank:typecheck-all")
   def typecheckAll(): pass
 
+  #@SwankMethod("swank:format-source")
+
+  #@SwankMethod("swank:public-symbol-search")
+
+  #@SwankMethod("swank:import-suggestions")
+
+  @SwankMethod("swank:completions")
+  def completions(filename, offset, limit, case): pass
+
   @SwankMethod("swank:uses-of-symbol-at-point")
   def usesOfSymbolAtPoint(filename, offset): pass
 

@@ -48,10 +48,12 @@ def initLog(mainlogger, filename, stdout = False):
 
 def CatchAndLogException(mth):
   def methodWrapper(*args, **kwargs):
+    r = None
     log = logging.getLogger('ensime-common')
-    try: mth(*args, **kwargs)
+    try: r = mth(*args, **kwargs)
     except:
       log.exception("[ CatchAndLogException ]")
+    return r
 
   return methodWrapper
 

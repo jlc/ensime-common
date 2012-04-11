@@ -257,6 +257,13 @@ class SwankProcessor(object):
       def consume(data, size):
         return data[size:]
 
+      # be carefull to decode() and then calculate data size using len(data)
+      # from EnsimeClient.py:
+      # note: the size given in Swank header correspond to the length of the string which follow,
+      # which may differ from the real number of bytes (depending on encoding. e.g. utf-8)
+      # take care to a) decode() b) calculate using len(decoded)
+      data = data.decode("utf-8")
+
       data = self.rest + data.replace("\n", '')
       self.rest = ''
       expect = self.expectedSize

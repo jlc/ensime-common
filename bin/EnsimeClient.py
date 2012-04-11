@@ -64,14 +64,31 @@ class Proxy:
   class Read:
     def __init__(self, serverSocket):
       self.serverSocket = serverSocket
+      self.buf = bytearray(4096)
 
     def server(self):
+
+      def readUntil(size):
+        data = ''
+        while size > 0:
+          s = 4096
+          if size <= s: s = size
+
+          s = self.serverSocket.recv_into(self.buf, s)
+          decoded = self.buf[:s].decode("utf-8")
+          data += decoded
+          size -= len(decoded)
+        return data
+
+      # note: the size given in Swank header correspond to the length of the string which follow,
+      # which may differ from the real number of bytes (depending on encoding. e.g. utf-8)
+      # take care to a) decode() b) calculate using len(decoded)
       try:
         hexSize = self.serverSocket.recv(6)
         size = int(hexSize, 16)
-        data = self.serverSocket.recv(size)
+        data = readUntil(size)
       except Exception as e:
-        log.error("Proxy.Read.server: unable to read data from server: " + str(e))
+        log.exception("Proxy.Read.server: unable to read data from server: " + str(e))
         return (None, None, None)
       return (size, hexSize, data)
 

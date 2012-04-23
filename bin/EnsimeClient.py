@@ -127,7 +127,7 @@ class Proxy:
     self.write = self.Write(serverSocket)
 
 class RawProxy(Proxy):
-  """Raw Proxy: without add or changes on data"""
+  """Raw Proxy: direct data proxying"""
 
   def __init__(self, serverSocket):
     Proxy.__init__(self, serverSocket)
@@ -137,7 +137,7 @@ class RawProxy(Proxy):
     if size == None:
       return False
 
-    log.debug("server: " + hexSize + data)
+    log.debug("%s server: %s%s", self.__class__.__name__, hexSize, data)
 
     if not self.write.stdout(hexSize + data + "\n"):
       return False
@@ -149,9 +149,30 @@ class RawProxy(Proxy):
     if data == None:
       return False
 
-    log.debug("stdin: " + data.strip())
+    log.debug("%s stdin: %s", self.__class__.__name__, data.strip())
 
     if not self.write.server(data):
+      return False
+
+    return True
+
+class AsciiRawProxy(RawProxy):
+  """Ascii Raw Proxy: replace utf-8 characters with ascii"""
+
+  def __init__(self, serverSocket):
+    RawProxy.__init__(self, serverSocket)
+
+  def fromServer(self):
+    (size, hexSize, udata) = self.read.server()
+    if size == None:
+      return False
+
+    data = udata.encode('ascii', 'xmlcharrefreplace')
+    hexSize = "%06x" % (len(data))
+
+    log.debug("%s server: %s%s", self.__class__.__name__, hexSize, data)
+
+    if not self.write.stdout(hexSize + data + "\n"):
       return False
 
     return True
@@ -167,7 +188,7 @@ class SwankProxy(Proxy):
     if size == None:
       return False
 
-    log.debug("server: " + hexSize + data)
+    log.debug("%s server: %s%s", self.__class__.__name__, hexSize, data)
 
     if not self.write.stdout(data + "\n"):
       return False
@@ -179,7 +200,7 @@ class SwankProxy(Proxy):
     if data == None:
       return False
 
-    log.debug("stdin: " + data.strip())
+    log.debug("%s stdin: %s", self.__class__.__name__, data.strip())
 
     dataSize = "%06x" % (len(data))
     if not self.write.server(dataSize + data):
@@ -197,7 +218,6 @@ def usage():
 
   print("Usage: %s %s" % (sys.argv[0], ' '.join(helplist)))
   print("")
-  sys.exit(1)
 
 @CatchAndLogException
 def main():
@@ -216,6 +236,10 @@ def main():
                     dest='raw',
                     action="store_true",
                     help='raw mode')
+  parser.add_option('-R', '--rawascii',
+                    dest='rawascii',
+                    action="store_true",
+                    help='raw ascii mode')
 
   (options, args) = parser.parse_args()
 
@@ -253,9 +277,15 @@ def main():
     log.error("Unable to connect to swank server "+str(addr))
     return 1
 
+  if options.raw and options.rawascii:
+    log.error("Please, choose between raw or rawascii")
+    return 1
+
   proxy = None
   if options.raw:
     proxy = RawProxy(serverSocket)
+  elif options.rawascii:
+    proxy = AsciiRawProxy(serverSocket)
   else:
     proxy = SwankProxy(serverSocket)
 

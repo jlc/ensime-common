@@ -23,6 +23,7 @@ import logging
 
 from Helper import *
 
+# ensime-common should be initialized with LogSetup
 log = logging.getLogger('ensime-common')
 
 # S-Expression Python Object representation

@@ -17,6 +17,7 @@
 from Helper import SimpleSingleton
 from SExpression import *
 
+# ensime-common should be initialized with LogSetup
 log = logging.getLogger('ensime-common')
 
 # Response handler class

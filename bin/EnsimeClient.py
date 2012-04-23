@@ -223,7 +223,7 @@ def main():
   if options.log != None:
     logfile = options.log
 
-  initLog('', logfile)
+  LogSetup().setup('EnsimeClient', logfile, False)
 
   if options.port != None:
     try: port = int(options.port)

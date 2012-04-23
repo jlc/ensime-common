@@ -20,52 +20,6 @@ import traceback
 import re
 import logging
 
-# NOTE: Remember to initialize a Logger for 'ensime-common'
-
-# initialize a high level of logger called 'mainlogger'
-# all sublogger should be prefixed by 'mainlogger'
-def initLog(mainlogger, filename, stdout = False):
-  log = logging.getLogger(mainlogger)
-
-  FORMAT =    '%(asctime)s %(levelname)s [%(name)s] '
-  FORMAT +=   '%(message)s'
-  #FORMAT +=   '%(message)s (%(funcName)s(), %(filename)s:%(lineno)d)'
-
-  formatter = logging.Formatter(fmt=FORMAT)
-
-  handlers = []
-
-  fileHandler = None
-  try:
-    fileHandler = logging.FileHandler(filename)
-    handlers.append(logging.FileHandler(filename))
-  except: pass
-
-  streamHandler = None
-  try:
-    if stdout:
-      streamHandler = logging.StreamHandler()
-      handlers.append(logging.StreamHandler())
-  except: pass
-
-  for h in handlers:
-    h.setFormatter(formatter)
-    log.addHandler(h)
-
-  log.setLevel(logging.DEBUG)
-  log.propagate = False
-
-def CatchAndLogException(mth):
-  def methodWrapper(*args, **kwargs):
-    r = None
-    log = logging.getLogger('ensime-common')
-    try: r = mth(*args, **kwargs)
-    except:
-      log.exception("[ CatchAndLogException ]")
-    return r
-
-  return methodWrapper
-
 #
 # Simple Singleton decorator
 #
@@ -77,6 +31,88 @@ def SimpleSingleton(cls):
       instances[cls] = cls()
     return instances[cls]
   return instance
+
+@SimpleSingleton
+class LogSetup:
+
+  FORMAT = '%(asctime)s %(levelname)s [%(name)s] %(message)s' # (%(funcName)s(), %(filename)s:%(lineno)d)'
+
+  def __init__(self):
+    self.handlers = {} # {name: handler}
+
+  def setup(self, loggerName, logFilename = None, stdout = False):
+    self.initLogger(loggerName)
+
+    if logFilename != None and logFilename != '':
+      self.addFileHandler(loggerName, logFilename)
+    else:
+      self.removeFileHandler(loggerName)
+
+    if stdout:
+      self.addStreamHandler(loggerName)
+    else:
+      self.removeStreamHandler(loggerName)
+
+  def loggerNames(self):
+    for name in self.handlers.keys():
+      yield name
+
+  def hasLogger(self):
+    if len(self.handlers) > 0: return True
+    return False
+
+  def initLogger(self, name):
+    log = logging.getLogger(name)
+
+    if not self.handlers.has_key(name):
+      self.handlers[name] = {}
+
+      log.setLevel(logging.DEBUG)
+      log.propagate = False
+
+  def addHandler(self, loggerName, handlerName, handlerCreator):
+    if self.handlers.has_key(loggerName) and not self.handlers[loggerName].has_key(handlerName):
+      try:
+        handler = handlerCreator()
+        handler.setFormatter(logging.Formatter(fmt=self.FORMAT))
+        self.handlers[loggerName][handlerName] = handler
+
+        logging.getLogger(loggerName).addHandler(handler)
+      except Exception as e:
+        print("LogSetup.addHandler: exception while adding handler '%s' for logger '%s': %s" % (handlerName, loggerName, str(e)))
+
+  def removeHandler(self, loggerName, handlerName):
+    if self.handlers.has_key(loggerName) and self.handlers[loggerName].has_key(handlerName):
+      logging.getLogger(loggerName).removeHandler(self.handlers[loggerName][handlerName])
+      del self.handlers[loggerName][handlerName]
+
+  def addStreamHandler(self, loggerName):
+    self.addHandler(loggerName, 'streamHandler', lambda: logging.StreamHandler())
+
+  def removeStreamHandler(self, loggerName):
+    self.removeHandler(loggerName, 'streamHandler')
+
+  def addFileHandler(self, loggerName, logFilename):
+    self.addHandler(loggerName, 'fileHandler', lambda: logging.FileHandler(logFilename))
+
+  def removeFileHandler(self, loggerName):
+    self.removeHandler(loggerName, 'fileHandler')
+
+def CatchAndLogException(mth):
+  def methodWrapper(*args, **kwargs):
+    # forward exception on all registered loggers or use a basic configuration
+    if LogSetup().hasLogger():
+      logs = [logging.getLogger(name) for name in LogSetup().loggerNames()]
+    else:
+      logging.basicConfig()
+      logs = [logging.getLogger()]
+    try:
+      return mth(*args, **kwargs)
+    except:
+      for log in logs:
+        log.exception("[ CatchAndLogException ]")
+
+  return methodWrapper
 
 # list given object attributes, and call fct(attrname, obj.attr) for each of them
 # return the list of attributes as string

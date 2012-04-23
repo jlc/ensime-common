@@ -193,7 +193,7 @@ class SwankProcessor(object):
 
   @CatchAndLogException
   def process(self, data):
-    log.debug("Processor.process: data: '%s'" % (data))
+    log.debug("Processor.process: len(data): %d - data: '%0.16s'" % (len(data), data))
 
     self.messages.add(data)
 
@@ -258,12 +258,10 @@ class SwankProcessor(object):
       def consume(data, size):
         return data[size:]
 
-      # be carefull to decode() and then calculate data size using len(data)
-      # from EnsimeClient.py:
-      # note: the size given in Swank header correspond to the length of the string which follow,
-      # which may differ from the real number of bytes (depending on encoding. e.g. utf-8)
-      # take care to a) decode() b) calculate using len(decoded)
-      data = data.decode("utf-8")
+      # NOTE: Be careful, len(data) may differ from expected size due to encoding (utf8, ascii).
+      # EnsimeClient provide a mode (RawAscii) which encode utf8 characters to xmlchar ascii.
+      # RawAscii should be used until utf8 is properly handled in vim (omni-completion...etc.)
+      # In case we receive utf8 characters here, we must: data = data.encode('utf-8')
 
       data = self.rest + data.replace("\n", '')
       self.rest = ''

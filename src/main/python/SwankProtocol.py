@@ -54,7 +54,8 @@ class SwankRpc:
   @SwankMethod("swank:typecheck-all")
   def typecheckAll(): pass
 
-  #@SwankMethod("swank:format-source")
+  @SwankMethod("swank:format-source")
+  def formatSource(filenames): pass
 
   #@SwankMethod("swank:public-symbol-search")
 
